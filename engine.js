@@ -87,6 +87,28 @@ function loadCase(storage=defaultStorage()){
  try{const raw=storage.getItem(STORAGE_KEY);if(!raw)return null;const parsed=JSON.parse(raw);return parsed.version===STORAGE_VERSION&&validState(parsed.case)?parsed.case:null}catch{return null}
 }
 function clearCase(storage=defaultStorage()){if(!storage)return false;storage.removeItem(STORAGE_KEY);return true}
+
+function addEvidence(s,x={}){
+ const n=clone(s),now=new Date().toISOString();
+ const ev={
+  id:x.id||("ev-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8)),
+  kind:x.kind||"OTHER",
+  label:(x.label||"").trim(),
+  note:(x.note||"").trim(),
+  source:x.source||"USER_INPUT",
+  status:x.status||"CLAIMED",
+  event_time:x.event_time||null,
+  captured_at:now,
+  file:x.file?{name:x.file.name||"",type:x.file.type||"",size:Number(x.file.size)||0,last_modified:x.file.last_modified||null,storage:"LOCAL_INDEXEDDB"}:null
+ };
+ n.evidence=[...(n.evidence||[]),ev];
+ n.updated_at=now;
+ return{state:n,evidence:clone(ev)};
+}
+function removeEvidence(s,id){
+ const n=clone(s);n.evidence=(n.evidence||[]).filter(e=>e.id!==id);n.updated_at=new Date().toISOString();return n;
+}
+
 function applyEvent(s,event){
  const n=clone(s);
  const src=event.source||"SIMULATION";
@@ -108,5 +130,5 @@ function evaluateFixture(g){
  if(g.saleDeadlineHours!=null)s.saleDeadlineHours=g.saleDeadlineHours;
  return{action:select(s),releaseReady:releaseReady(s),eligible:a=>eligible(s,a),economics:economics(s)};
 }
-root.WVR={ACTIONS,STORAGE_VERSION,STORAGE_KEY,newCase,releaseReady,eligible,select,recommend,applyEvent,saveCase,loadCase,clearCase,evaluateFixture};
+root.WVR={ACTIONS,STORAGE_VERSION,STORAGE_KEY,newCase,releaseReady,eligible,select,recommend,addEvidence,removeEvidence,applyEvent,saveCase,loadCase,clearCase,evaluateFixture};
 })(typeof window!=="undefined"?window:globalThis);

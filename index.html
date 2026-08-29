@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wisconsin Vehicle Recovery</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#171717;background:#f5f5f2}*{box-sizing:border-box}
+body{margin:0}.shell{max-width:680px;margin:auto;padding:20px}.eyebrow{font-size:.75rem;font-weight:800;letter-spacing:.12em}
+h1{font-size:2rem;line-height:1.05;margin:.4rem 0 1.5rem}.card{background:white;border:1px solid #ddd;border-radius:18px;padding:18px;margin:14px 0}
+label{display:block;font-weight:750;margin:16px 0 7px}select,input,textarea,button{width:100%;font:inherit;padding:13px;border-radius:12px;border:1px solid #bbb;background:white}
+textarea{min-height:90px}button{margin-top:18px;background:#171717;color:white;border:0;font-weight:800}.result h2{font-size:.85rem;letter-spacing:.08em}
+.action{font-size:1.45rem;font-weight:850}.meta{display:grid;grid-template-columns:1fr 1fr;gap:10px}.meta div{background:#f6f6f3;padding:10px;border-radius:10px}
+.warning{border-left:4px solid #171717;padding-left:12px}.muted{color:#666;font-size:.9rem}.hidden{display:none}
+</style></head>
+<body><main class="shell">
+<div class="eyebrow">WISCONSIN VEHICLE RECOVERY</div><h1>Get the car back.<br>Protect your rights.</h1>
+<section class="card" id="intake">
+<label for="custody">Where is your vehicle right now?</label>
+<select id="custody"><option value="UNKNOWN">I'm not sure</option><option value="TOW_COMPANY">Tow company</option><option value="CITY_GOVERNMENT_LOT">City / government lot</option><option value="POLICE_HAVE_IT">Police have it</option></select>
+<label for="reason">Why do they say they have it?</label><textarea id="reason" placeholder="Use their words if you can."></textarea>
+<label for="sale">Have you been told it may be sold, junked, or disposed of soon?</label>
+<select id="sale"><option value="UNSURE">I'm not sure</option><option value="NO">No</option><option value="YES">Yes</option></select>
+<button id="go">Show my best next step</button></section>
+<section class="card result hidden" id="result">
+<h2>BEST OPTION RIGHT NOW</h2><div class="action" id="action"></div>
+<div class="meta"><div><b>Cost</b><br><span id="cost"></span></div><div><b>Time</b><br><span id="time"></span></div></div>
+<h3>Why</h3><p id="why"></p><h3>DO THIS NEXT</h3><p id="next"></p>
+<div id="warningBox" class="warning hidden"><b>DON'T DO THIS YET</b><p id="warning"></p></div>
+<p class="muted">Ask Pilot can explain this recommendation or help with the current step. New facts are checked by the recovery engine before changing the recommendation.</p>
+</section></main><script src="/engine.js"></script><script>
+document.getElementById("go").onclick=()=>{const state=WVR.newCase({custody:document.getElementById("custody").value,reason:document.getElementById("reason").value,saleDanger:document.getElementById("sale").value});const r=WVR.recommend(state);for(const k of ["action","cost","time","why","next"])document.getElementById(k).textContent=r[k];const b=document.getElementById("warningBox");if(r.warning){document.getElementById("warning").textContent=r.warning;b.classList.remove("hidden")}else b.classList.add("hidden");document.getElementById("result").classList.remove("hidden");document.getElementById("result").scrollIntoView({behavior:"smooth"})};
+</script></body></html>

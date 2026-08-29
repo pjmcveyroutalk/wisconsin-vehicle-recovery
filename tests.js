@@ -13,3 +13,10 @@ test("VR-009",()=>{let x=WVR.evaluateFixture({objective:"BELONGINGS",abandonment
 test("VR-010",()=>{let x=WVR.evaluateFixture({freeAction:{cost:0,delayExposure:true},recoverNow:{costPositive:true,rightsPreserved:true}});assert.equal(x.economics,"TOTAL_RECOVERY_ECONOMICS")});
 for(const r of results)console.log(r.join(" — ")); if(results.some(r=>r[1]!=="PASS"))process.exit(1);
 console.log("10/10 core regressions passed.");
+
+const memory=()=>{const x={};return{getItem:k=>Object.prototype.hasOwnProperty.call(x,k)?x[k]:null,setItem:(k,v)=>x[k]=String(v),removeItem:k=>delete x[k]}};
+test("STATE-001",()=>{const m=memory(),s=WVR.newCase({custody:"TOW_COMPANY",reason:"tow charge",saleDanger:"NO"});WVR.recommend(s);assert(WVR.saveCase(s,m));const r=WVR.loadCase(m);assert.equal(r.vehicle.location,"TOW_COMPANY");assert.equal(r.facts.custody.source,"USER_INPUT");assert.equal(r.decision_history.length,1)});
+test("STATE-002",()=>{const m=memory();m.setItem(WVR.STORAGE_KEY,"not json");assert.equal(WVR.loadCase(m),null)});
+test("STATE-003",()=>{const m=memory(),s=WVR.newCase({});WVR.saveCase(s,m);assert(WVR.clearCase(m));assert.equal(WVR.loadCase(m),null)});
+
+for(const r of results)console.log(r.join(" — ")); if(results.some(r=>r[1]!=="PASS"))process.exit(1);console.log("13/13 core + state tests passed.");

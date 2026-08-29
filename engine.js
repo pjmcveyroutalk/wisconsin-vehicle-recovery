@@ -1,12 +1,18 @@
 (function(root){
 "use strict";
 const ACTIONS=["VERIFY","REQUEST_RECORD","PRESERVE_EVIDENCE","REQUEST_REVIEW","PROVIDE_DOCUMENT","DISPUTE_RECALCULATE","TENDER_PAY","CONTACT_RIGHTS_HOLDER","DEMAND_RELEASE","FILE_ESCALATE","SERVE_ENFORCE","PHYSICALLY_RECOVER"];
+const STORAGE_VERSION=1,STORAGE_KEY="wvr-case-state-v1";
 function blocker(type,state="ACTIVE",source=null){return{type,state,source}}
 function clone(x){return JSON.parse(JSON.stringify(x))}
 function newCase(x={}){
+ const now=new Date().toISOString();
  const s={vehicle:{location:x.custody||"UNKNOWN"},stated_reason_raw:x.reason||"",objective:x.objective||"RECOVER",
  sale_danger:{value:x.saleDanger||"UNSURE",status:x.saleDanger==="YES"||x.saleDanger==="NO"?"CLAIMED":"UNKNOWN"},
- blockers:[],facts:{},evidence:[],actions:[],decision_history:[],lifecycle:"INTAKE",current_recommendation:null};
+ blockers:[],facts:{
+  custody:{value:x.custody||"UNKNOWN",status:x.custody&&x.custody!=="UNKNOWN"?"CLAIMED":"UNKNOWN",source:"USER_INPUT"},
+  stated_reason:{value:x.reason||"",status:x.reason?"CLAIMED":"UNKNOWN",source:"USER_INPUT"},
+  sale_danger:{value:x.saleDanger||"UNSURE",status:x.saleDanger==="YES"||x.saleDanger==="NO"?"CLAIMED":"UNKNOWN",source:"USER_INPUT"}
+ },evidence:[],actions:[],decision_history:[],lifecycle:"INTAKE",current_recommendation:null,created_at:now,updated_at:now};
  const r=(x.reason||"").toLowerCase();
  if(x.custody==="POLICE_HAVE_IT"||/evidence|police hold/.test(r))s.blockers.push(blocker("POLICE_EVIDENCE"));
  if(/fee|bill|storage|tow charge|payment|lien/.test(r))s.blockers.push(blocker("MONEY_LIEN"));
@@ -69,6 +75,18 @@ function recommend(s){
  s.decision_history=[...(s.decision_history||[]),clone(snap)];
  return r;
 }
+function defaultStorage(){try{return typeof localStorage!=="undefined"?localStorage:null}catch{return null}}
+function validState(s){return !!(s&&typeof s==="object"&&s.vehicle&&Array.isArray(s.blockers)&&Array.isArray(s.decision_history)&&typeof s.lifecycle==="string")}
+function saveCase(s,storage=defaultStorage()){
+ if(!storage||!validState(s))return false;
+ const n=clone(s);n.updated_at=new Date().toISOString();
+ storage.setItem(STORAGE_KEY,JSON.stringify({version:STORAGE_VERSION,case:n}));return true;
+}
+function loadCase(storage=defaultStorage()){
+ if(!storage)return null;
+ try{const raw=storage.getItem(STORAGE_KEY);if(!raw)return null;const parsed=JSON.parse(raw);return parsed.version===STORAGE_VERSION&&validState(parsed.case)?parsed.case:null}catch{return null}
+}
+function clearCase(storage=defaultStorage()){if(!storage)return false;storage.removeItem(STORAGE_KEY);return true}
 function applyEvent(s,event){
  const n=clone(s);
  const src=event.source||"SIMULATION";
@@ -78,6 +96,7 @@ function applyEvent(s,event){
  if(event.resolveBlocker)setBlocker(n,event.resolveBlocker,event.state||"TERMINATED",src);
  if(event.clearUnknown)n.blockers=(n.blockers||[]).filter(b=>b.type!=="UNKNOWN");
  n.lifecycle=event.lifecycle||n.lifecycle;
+ n.updated_at=new Date().toISOString();
  recommend(n);
  return n;
 }
@@ -89,5 +108,5 @@ function evaluateFixture(g){
  if(g.saleDeadlineHours!=null)s.saleDeadlineHours=g.saleDeadlineHours;
  return{action:select(s),releaseReady:releaseReady(s),eligible:a=>eligible(s,a),economics:economics(s)};
 }
-root.WVR={ACTIONS,newCase,releaseReady,eligible,select,recommend,applyEvent,evaluateFixture};
+root.WVR={ACTIONS,STORAGE_VERSION,STORAGE_KEY,newCase,releaseReady,eligible,select,recommend,applyEvent,saveCase,loadCase,clearCase,evaluateFixture};
 })(typeof window!=="undefined"?window:globalThis);

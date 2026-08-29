@@ -170,9 +170,9 @@ module.exports = async function handler(request, response) {
     const body = await result.text();
     healthReady =
       result.ok &&
-      body.includes("$FLOCKTUAH") &&
-      body.includes("<title>FLOCK TUAH | $FLOCKTUAH</title>") &&
-      body.includes("FLOCK WATCH");
+      body.includes("WISCONSIN VEHICLE RECOVERY") &&
+      body.includes("<title>Wisconsin Vehicle Recovery</title>") &&
+      body.includes("BEST OPTION RIGHT NOW");
   } catch {
     healthReady = false;
   } finally {

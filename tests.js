@@ -20,3 +20,8 @@ test("STATE-002",()=>{const m=memory();m.setItem(WVR.STORAGE_KEY,"not json");ass
 test("STATE-003",()=>{const m=memory(),s=WVR.newCase({});WVR.saveCase(s,m);assert(WVR.clearCase(m));assert.equal(WVR.loadCase(m),null)});
 
 for(const r of results)console.log(r.join(" — ")); if(results.some(r=>r[1]!=="PASS"))process.exit(1);console.log("13/13 core + state tests passed.");
+
+test("EVIDENCE-001",()=>{const s=WVR.newCase({}),x=WVR.addEvidence(s,{kind:"NOTICE",label:"sale notice",source:"USER_INPUT",status:"CLAIMED",file:{name:"notice.pdf",type:"application/pdf",size:123,last_modified:42}});assert.equal(s.evidence.length,0);assert.equal(x.state.evidence.length,1);assert.equal(x.evidence.source,"USER_INPUT");assert.equal(x.evidence.status,"CLAIMED");assert.equal(x.evidence.file.storage,"LOCAL_INDEXEDDB")});
+test("EVIDENCE-002",()=>{const s=WVR.newCase({}),x=WVR.addEvidence(s,{kind:"PHOTO",label:"sign"}),y=WVR.removeEvidence(x.state,x.evidence.id);assert.equal(y.evidence.length,0);assert.equal(x.state.evidence.length,1)});
+
+for(const r of results.slice(13))console.log(r.join(" — "));if(results.some(r=>r[1]!=="PASS"))process.exit(1);console.log("15/15 core + state + evidence tests passed.");

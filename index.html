@@ -28,25 +28,60 @@ textarea{min-height:90px}button{margin-top:18px;background:#171717;color:white;b
 <h3>Why</h3><p id="why"></p><h3>DO THIS NEXT</h3><p id="next"></p>
 <div id="warningBox" class="warning hidden"><b>DON'T DO THIS YET</b><p id="warning"></p></div>
 <p class="muted">Ask Pilot can explain this recommendation or help with the current step. New facts are checked by the recovery engine before changing the recommendation.</p>
+
+<hr>
+<h3>Evidence & documents</h3>
+<p class="muted">Save a photo/document or a note with its source. Files stay in this browser on this device; they are not uploaded.</p>
+<label for="evKind">What is it?</label>
+<select id="evKind"><option value="TOW_RECEIPT">Tow receipt / invoice</option><option value="NOTICE">Notice / letter</option><option value="PHOTO">Photo / screenshot</option><option value="POLICE_RECORD">Police record</option><option value="AUTHORIZATION">Tow authorization</option><option value="COMMUNICATION">Email / text / call note</option><option value="OTHER">Other</option></select>
+<label for="evLabel">Short label</label><input id="evLabel" placeholder="Example: itemized tow bill">
+<label for="evNote">What does it show?</label><textarea id="evNote" placeholder="Keep this factual. You can leave it blank."></textarea>
+<label for="evFile">Attach a file or photo (optional)</label><input id="evFile" type="file" accept="image/*,.pdf,.txt">
+<button class="secondary" id="saveEvidence">Save evidence</button>
+<div id="evidenceList"></div>
+
 <button class="secondary" id="clear">Start over and clear this case</button>
 </section></main><script src="/engine.js"></script><script>
-const $=id=>document.getElementById(id);
+const $=id=>document.getElementById(id);let caseState=null;
+function renderEvidence(){
+ const box=$("evidenceList");box.innerHTML="";
+ for(const e of (caseState&&caseState.evidence||[])){
+  const d=document.createElement("div");d.className="meta";d.style.marginTop="10px";
+  const file=e.file?` · ${e.file.name}`:"";
+  d.textContent=`${e.label||e.kind}${file} · ${e.status} · ${e.source}`;
+  box.appendChild(d);
+ }
+}
 function render(state){
- const r=state.current_recommendation||WVR.recommend(state);
+ caseState=state;const r=state.current_recommendation||WVR.recommend(state);
  for(const k of ["action","cost","time","why","next"])$(k).textContent=r[k];
  const b=$("warningBox");if(r.warning){$("warning").textContent=r.warning;b.classList.remove("hidden")}else b.classList.add("hidden");
- $("result").classList.remove("hidden");
+ renderEvidence();$("result").classList.remove("hidden");
 }
 function hydrate(state){
- $("custody").value=state.vehicle&&state.vehicle.location||"UNKNOWN";
- $("reason").value=state.stated_reason_raw||"";
- $("sale").value=state.sale_danger&&state.sale_danger.value||"UNSURE";
+ caseState=state;$("custody").value=state.vehicle&&state.vehicle.location||"UNKNOWN";
+ $("reason").value=state.stated_reason_raw||"";$("sale").value=state.sale_danger&&state.sale_danger.value||"UNSURE";
  if(state.current_recommendation)render(state);
 }
+function evidenceDB(){
+ return new Promise((resolve,reject)=>{const r=indexedDB.open("wvr-evidence-v1",1);
+  r.onupgradeneeded=()=>r.result.createObjectStore("files");
+  r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);
+ });
+}
+async function storeFile(id,file){const db=await evidenceDB();return new Promise((resolve,reject)=>{const tx=db.transaction("files","readwrite");tx.objectStore("files").put(file,id);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
+async function clearFiles(){const db=await evidenceDB();return new Promise((resolve,reject)=>{const tx=db.transaction("files","readwrite");tx.objectStore("files").clear();tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
 $("go").onclick=()=>{
- const state=WVR.newCase({custody:$("custody").value,reason:$("reason").value,saleDanger:$("sale").value});
- WVR.recommend(state);WVR.saveCase(state);render(state);$("result").scrollIntoView({behavior:"smooth"});
+ caseState=WVR.newCase({custody:$("custody").value,reason:$("reason").value,saleDanger:$("sale").value});
+ WVR.recommend(caseState);WVR.saveCase(caseState);render(caseState);$("result").scrollIntoView({behavior:"smooth"});
 };
-$("clear").onclick=()=>{WVR.clearCase();location.reload()};
+$("saveEvidence").onclick=async()=>{
+ if(!caseState)return;
+ const f=$("evFile").files[0]||null;
+ const added=WVR.addEvidence(caseState,{kind:$("evKind").value,label:$("evLabel").value,note:$("evNote").value,source:"USER_INPUT",status:"CLAIMED",file:f?{name:f.name,type:f.type,size:f.size,last_modified:f.lastModified}:null});
+ if(f)await storeFile(added.evidence.id,f);
+ caseState=added.state;WVR.saveCase(caseState);$("evLabel").value="";$("evNote").value="";$("evFile").value="";renderEvidence();
+};
+$("clear").onclick=async()=>{WVR.clearCase();try{await clearFiles()}catch{}location.reload()};
 const resumed=WVR.loadCase();if(resumed)hydrate(resumed);
 </script></body></html>
